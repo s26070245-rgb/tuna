@@ -1,691 +1,547 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connect Four AI</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Four</title>
     <style>
-      :root {
-        --bg1: #0f172a;
-        --bg2: #111827;
-        --panel: rgba(15, 23, 42, 0.8);
-        --panel-border: rgba(148, 163, 184, 0.2);
-        --text: #e2e8f0;
-        --muted: #94a3b8;
-        --red: #f87171;
-        --yellow: #facc15;
-        --blue: #60a5fa;
-        --board: #1d4ed8;
-        --cell: #0f172a;
-        --boss-accent: #a78bfa;
-        --boss-glow: rgba(167, 139, 250, 0.38);
-        --boss-strong: #8b5cf6;
-      }
-
-      * { box-sizing: border-box; }
-
-      html, body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at top, #172554, var(--bg1) 40%, var(--bg2));
-        color: var(--text);
-        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-
-      body {
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-      }
-
-      #app {
-        position: relative;
-        width: min(92vw, 760px);
-        aspect-ratio: 1.12;
-        display: grid;
-        place-items: center;
-      }
-
-      .hud {
-        position: absolute;
-        top: 16px;
-        left: 16px;
-        z-index: 3;
-        min-width: min(280px, 42vw);
-        background: var(--panel);
-        border: 1px solid var(--panel-border);
-        border-radius: 16px;
-        padding: 14px 16px;
-        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.3);
-        backdrop-filter: blur(8px);
-      }
-
-      .boss-banner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 10px;
-        padding: 8px 10px;
-        border-radius: 12px;
-        background: rgba(15, 23, 42, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-      }
-
-      .boss-mark {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--boss-accent);
-        box-shadow: 0 0 16px var(--boss-glow);
-      }
-
-      .boss-name {
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--text);
-        font-size: 0.72rem;
-      }
-
-      .round-pill {
-        color: var(--boss-accent);
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: clamp(1.2rem, 2vw, 2rem);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .status {
-        margin-top: 10px;
-        color: var(--muted);
-        font-size: 1rem;
-      }
-
-      .status span {
-        color: var(--text);
-        font-weight: 700;
-      }
-
-      .legend {
-        display: flex;
-        gap: 12px;
-        margin-top: 10px;
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
-
-      .dot {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-      }
-
-      .dot.red { background: var(--red); }
-      .dot.yellow { background: var(--yellow); }
-
-      #board {
-        width: min(84vw, 620px);
-        aspect-ratio: 7 / 6;
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 0.6rem;
-        padding: 0.9rem;
-        background: linear-gradient(180deg, var(--boss-strong), #1e3a8a);
-        border-radius: 24px;
-        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.55), inset 0 0 0 3px rgba(255,255,255,0.12);
-        border: 1px solid rgba(191, 219, 254, 0.2);
-      }
-
-      .cell {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 1;
-        border-radius: 50%;
-        background: var(--cell);
-        border: none;
-        cursor: pointer;
-        transition: transform 0.12s ease, box-shadow 0.12s ease;
-        box-shadow: inset 0 10px 18px rgba(15, 23, 42, 0.9);
-        transform-origin: center center;
-      }
-
-      .cell:hover {
-        transform: translateY(-1px);
-      }
-
-      .cell::before {
-        content: "";
-        position: absolute;
-        inset: 14%;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.05);
-        opacity: 0;
-        transition: opacity 0.15s ease;
-      }
-
-      .cell.hovered::before {
-        opacity: 1;
-      }
-
-      .cell.red {
-        background: linear-gradient(135deg, #f87171, #ef4444);
-        box-shadow: inset 0 8px 12px rgba(255,255,255,0.25), inset 0 -8px 16px rgba(127,29,29,0.28), 0 0 18px rgba(248,113,113,0.38);
-      }
-
-      .cell.yellow {
-        background: linear-gradient(135deg, #facc15, #eab308);
-        box-shadow: inset 0 8px 12px rgba(255,255,255,0.28), inset 0 -8px 16px rgba(133,77,14,0.25), 0 0 18px rgba(250,204,21,0.32);
-      }
-
-      @keyframes discDrop {
-        0% {
-          transform: translateY(-180%) scale(0.72);
-          opacity: 0.2;
-          filter: brightness(1.3);
-        }
-        55% {
-          transform: translateY(4%) scale(1.06);
-          opacity: 1;
-          filter: brightness(1.08);
-        }
-        100% {
-          transform: translateY(0) scale(1);
-          opacity: 1;
-          filter: brightness(1);
-        }
-      }
-
-      .controls {
-        position: absolute;
-        right: 20px;
-        bottom: 20px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-
-      button {
-        appearance: none;
-        border: none;
-        border-radius: 999px;
-        background: linear-gradient(135deg, var(--blue), #3b82f6);
-        color: white;
-        font-weight: 700;
-        padding: 12px 18px;
-        font-size: 0.98rem;
-        cursor: pointer;
-        box-shadow: 0 10px 20px rgba(59, 130, 246, 0.35);
-        transition: transform 0.15s ease, filter 0.15s ease;
-      }
-
-      button:hover {
-        transform: translateY(-1px);
-        filter: brightness(1.05);
-      }
-
-      button.secondary {
-        background: linear-gradient(135deg, #334155, #475569);
-        box-shadow: none;
-      }
-
-      @media (max-width: 700px) {
-        .hud {
-          top: 12px;
-          left: 12px;
-          right: 12px;
-          min-width: auto;
+        :root {
+            --bg-color: #f8fafc;
+            --board-color: #1e40af;
+            --board-shadow: #1e3a8a;
+            --hole-color: #e2e8f0;
+            --p1-color: #ef4444;
+            --p1-dark: #dc2626;
+            --p2-color: #eab308;
+            --p2-dark: #ca8a04;
         }
 
-        #board {
-          width: min(88vw, 560px);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        .controls {
-          left: 12px;
-          right: 12px;
-          justify-content: space-between;
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            overflow: hidden;
+            position: relative;
         }
 
-        button {
-          flex: 1;
+        /* Top Left Restart Button */
+        #restart-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #3b82f6;
+            color: white;
+            border: 3px solid #1d4ed8;
+            padding: 14px 24px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: transform 0.1s, background-color 0.2s;
+            z-index: 100;
         }
-      }
+
+        #restart-btn:hover {
+            background-color: #2563eb;
+            transform: scale(1.05);
+        }
+
+        #restart-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Top Status Header with Avatars & Speech Bubble */
+        .top-header {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 90;
+            width: 100%;
+            max-width: 800px;
+            padding: 0 100px; /* Space for restart button */
+        }
+
+        .avatar-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .avatar {
+            font-size: 56px;
+            background: white;
+            border: 4px solid #cbd5e1;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: border-color 0.3s, transform 0.3s;
+        }
+
+        .avatar.active {
+            border-color: #22c55e;
+            transform: scale(1.1);
+        }
+
+        .speech-bubble {
+            position: absolute;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 3px solid #334155;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            white-space: nowrap;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 10px 12px 10px;
+            border-style: solid;
+            border-color: transparent transparent #334155 transparent;
+        }
+
+        .speech-bubble.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(5px);
+        }
+
+        /* Board Container */
+        .board-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        .board {
+            background-color: var(--board-color);
+            padding: 16px;
+            border-radius: 28px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 14px;
+            box-shadow: 0 12px 0 var(--board-shadow), 0 20px 30px rgba(0, 0, 0, 0.25);
+            position: relative;
+            z-index: 20;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .column:hover .cell-overlay {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 40px;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            background-color: var(--hole-color);
+            border-radius: 50%;
+            box-shadow: inset 0 6px 8px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        /* Falling Piece Layer */
+        #falling-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .falling-disc {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: top 0.45s cubic-bezier(0.45, 0, 0.55, 1);
+        }
+
+        .disc-red {
+            background: radial-gradient(circle at 30% 30%, #f87171, var(--p1-color), var(--p1-dark));
+        }
+
+        .disc-yellow {
+            background: radial-gradient(circle at 30% 30%, #fde047, var(--p2-color), var(--p2-dark));
+        }
+
+        /* Winner Overlay */
+        .win-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 28px;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .win-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .win-message {
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .play-again-btn {
+            background-color: #22c55e;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .play-again-btn:hover {
+            background-color: #16a34a;
+            transform: scale(1.05);
+        }
+
+        /* Responsive scaling for smaller screens */
+        @media (max-height: 750px) {
+            .cell { width: 65px; height: 65px; }
+            .falling-disc { width: 65px; height: 65px; }
+            .board { gap: 10px; padding: 12px; }
+            .column { gap: 10px; }
+        }
     </style>
-  </head>
-  <body>
-    <div id="app">
-      <div class="hud">
-        <div class="boss-banner">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="boss-mark"></span>
-            <div id="bossName" class="boss-name">Boss 1: Thorn Titan</div>
-          </div>
-          <div id="roundLabel" class="round-pill">Round 1</div>
+</head>
+<body>
+
+    <button id="restart-btn" onclick="resetGame()">↻ Restart</button>
+
+    <div class="top-header">
+        <div class="avatar-box">
+            <div id="player-avatar" class="avatar active">👵</div>
         </div>
 
-        <h1>Connect Four</h1>
-        <div class="status">Status: <span id="turnStatus">Your turn</span></div>
-        <div class="legend">
-          <span><i class="dot red"></i>You</span>
-          <span><i class="dot yellow"></i>AI</span>
+        <div class="avatar-box">
+            <div id="ai-avatar" class="avatar">🦉</div>
+            <div id="speech-bubble" class="speech-bubble">Hello my dear! Ready to play?</div>
         </div>
-      </div>
-
-      <div id="board" aria-label="Connect Four board"></div>
-
-      <div class="controls">
-        <button id="restartBtn">Restart</button>
-        <button id="swapBtn" class="secondary">AI starts</button>
-      </div>
     </div>
 
+    <div class="board-wrapper">
+        <div class="board" id="board"></div>
+        <div id="win-overlay" class="win-overlay">
+            <div id="win-message" class="win-message">You Win!</div>
+            <button class="play-again-btn" onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <div id="falling-container"></div>
+
     <script>
-      const ROWS = 6;
-      const COLS = 7;
-      const EMPTY = 0;
-      const HUMAN = 1;
-      const AI = 2;
-      const WIN_LENGTH = 4;
+        const ROWS = 6;
+        const COLS = 7;
+        const PLAYER = 1;
+        const AI = 2;
 
-      const bosses = [
-        { name: 'Thorn Titan', accent: '#a78bfa', strong: '#8b5cf6', glow: 'rgba(167,139,250,0.38)' },
-        { name: 'Cinder Wyrm', accent: '#f59e0b', strong: '#f97316', glow: 'rgba(245,158,11,0.42)' },
-        { name: 'Tide Reaver', accent: '#38bdf8', strong: '#0ea5e9', glow: 'rgba(56,189,248,0.42)' },
-        { name: 'Ember Golem', accent: '#f87171', strong: '#ef4444', glow: 'rgba(248,113,113,0.42)' }
-      ];
+        let grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let isAnimating = false;
+        let gameOver = false;
+        let currentPlayer = PLAYER;
 
-      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
-      let currentPlayer = HUMAN;
-      let gameOver = false;
-      let aiStarts = false;
-      let hoveredColumn = null;
-      let roundNumber = 1;
-      let bossIndex = 0;
-
-      const boardEl = document.getElementById('board');
-      const turnStatus = document.getElementById('turnStatus');
-      const restartBtn = document.getElementById('restartBtn');
-      const swapBtn = document.getElementById('swapBtn');
-      const bossNameEl = document.getElementById('bossName');
-      const roundLabelEl = document.getElementById('roundLabel');
-
-      function getCurrentBoss() {
-        return bosses[bossIndex % bosses.length];
-      }
-
-      function updateBossHud() {
-        const boss = getCurrentBoss();
-        bossNameEl.textContent = `Boss ${roundNumber}: ${boss.name}`;
-        roundLabelEl.textContent = `Round ${roundNumber}`;
-        document.documentElement.style.setProperty('--boss-accent', boss.accent);
-        document.documentElement.style.setProperty('--boss-glow', boss.glow);
-        document.documentElement.style.setProperty('--boss-strong', boss.strong);
-        boardEl.style.background = `linear-gradient(180deg, ${boss.strong}, #1e3a8a)`;
-      }
-
-      function buildBoard() {
-        boardEl.innerHTML = '';
-        for (let row = 0; row < ROWS; row++) {
-          for (let col = 0; col < COLS; col++) {
-            const cell = document.createElement('button');
-            cell.type = 'button';
-            cell.className = 'cell';
-            cell.dataset.row = String(row);
-            cell.dataset.col = String(col);
-            cell.setAttribute('aria-label', `Column ${col + 1}, row ${row + 1}`);
-            cell.addEventListener('mouseenter', () => {
-              if (!gameOver && currentPlayer === HUMAN) {
-                hoveredColumn = col;
-                updateColumnHover();
-              }
-            });
-            cell.addEventListener('mouseleave', () => {
-              if (hoveredColumn === col) {
-                hoveredColumn = null;
-                updateColumnHover();
-              }
-            });
-            cell.addEventListener('click', () => handleHumanMove(col));
-            boardEl.appendChild(cell);
-          }
-        }
-      }
-
-      function renderBoard() {
-        const cells = [...boardEl.children];
-        cells.forEach((cell) => {
-          const row = Number(cell.dataset.row);
-          const col = Number(cell.dataset.col);
-          const value = board[row][col];
-          cell.classList.remove('red', 'yellow', 'hovered');
-          if (value === HUMAN) cell.classList.add('red');
-          if (value === AI) cell.classList.add('yellow');
-          if (hoveredColumn === col && !gameOver && currentPlayer === HUMAN) {
-            cell.classList.add('hovered');
-          }
-        });
-      }
-
-      function triggerDropAnimation(row, col) {
-        const cell = [...boardEl.children].find((el) => {
-          return Number(el.dataset.row) === row && Number(el.dataset.col) === col;
-        });
-
-        if (!cell) return;
-        cell.style.animation = 'none';
-        void cell.offsetWidth;
-        cell.style.animation = 'discDrop 0.45s cubic-bezier(0.18,0.8,0.2,1)';
-      }
-
-      function updateColumnHover() {
-        const cells = [...boardEl.children];
-        cells.forEach((cell) => {
-          const col = Number(cell.dataset.col);
-          cell.classList.toggle('hovered', hoveredColumn === col && !gameOver && currentPlayer === HUMAN);
-        });
-      }
-
-      function updateStatus() {
-        if (gameOver) return;
-        turnStatus.textContent = currentPlayer === HUMAN ? 'Your turn' : 'AI is thinking...';
-      }
-
-      function isValidMove(col) {
-        return col >= 0 && col < COLS && board[0][col] === EMPTY;
-      }
-
-      function getOpenRow(col) {
-        for (let row = ROWS - 1; row >= 0; row--) {
-          if (board[row][col] === EMPTY) return row;
-        }
-        return -1;
-      }
-
-      function dropDisc(col, player) {
-        const row = getOpenRow(col);
-        if (row === -1) return -1;
-        board[row][col] = player;
-        return row;
-      }
-
-      function checkWinner(row, col, player) {
-        const directions = [
-          [0, 1],
-          [1, 0],
-          [1, 1],
-          [1, -1]
+        const aiComments = [
+            "Nice placement!",
+            "Ooh, clever move!",
+            "You're very good at this!",
+            "Let me think for a second...",
+            "Hmm, where should I go?",
+            "Having so much fun with you!",
+            "Watch out for this move!",
+            "Ah, you blocked me!"
         ];
 
-        for (const [dx, dy] of directions) {
-          let count = 1;
-          count += countDirection(row, col, dx, dy, player);
-          count += countDirection(row, col, -dx, -dy, player);
-          if (count >= WIN_LENGTH) return true;
-        }
-        return false;
-      }
+        const winComments = "Great job! What a wonderful victory!";
+        const loseComments = "Good game! You played so well!";
+        const drawComments = "A tie! We make a great team!";
 
-      function countDirection(row, col, dx, dy, player) {
-        let count = 0;
-        let r = row + dy;
-        let c = col + dx;
+        // Initialize Board
+        const boardEl = document.getElementById('board');
+        const speechBubble = document.getElementById('speech-bubble');
+        const playerAvatar = document.getElementById('player-avatar');
+        const aiAvatar = document.getElementById('ai-avatar');
 
-        while (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === player) {
-          count++;
-          r += dy;
-          c += dx;
-        }
-        return count;
-      }
+        function createBoard() {
+            boardEl.innerHTML = '';
+            for (let c = 0; c < COLS; c++) {
+                const colEl = document.createElement('div');
+                colEl.className = 'column';
+                colEl.dataset.col = c;
+                colEl.addEventListener('click', () => handleColumnClick(c));
 
-      function isBoardFull() {
-        return board[0].every(cell => cell !== EMPTY);
-      }
-
-      function finishGame(message) {
-        gameOver = true;
-        turnStatus.textContent = message;
-        setTimeout(() => {
-          bossIndex += 1;
-          roundNumber += 1;
-          resetGame();
-        }, 1400);
-      }
-
-      function makeMove(col, player) {
-        if (gameOver || !isValidMove(col)) return false;
-
-        const row = dropDisc(col, player);
-        if (row === -1) return false;
-
-        renderBoard();
-        triggerDropAnimation(row, col);
-
-        if (checkWinner(row, col, player)) {
-          finishGame(player === HUMAN ? 'You win!' : 'AI wins!');
-          return true;
-        }
-
-        if (isBoardFull()) {
-          finishGame('Draw!');
-          return true;
-        }
-
-        currentPlayer = player === HUMAN ? AI : HUMAN;
-        updateStatus();
-        return true;
-      }
-
-      function handleHumanMove(col) {
-        if (gameOver || currentPlayer !== HUMAN) return;
-        if (!makeMove(col, HUMAN)) return;
-
-        if (!gameOver && currentPlayer === AI) {
-          setTimeout(() => {
-            if (!gameOver) {
-              const aiMove = chooseBestMove();
-              makeMove(aiMove, AI);
+                for (let r = 0; r < ROWS; r++) {
+                    const cellEl = document.createElement('div');
+                    cellEl.className = 'cell';
+                    cellEl.id = `cell-${r}-${c}`;
+                    colEl.appendChild(cellEl);
+                }
+                boardEl.appendChild(colEl);
             }
-          }, 300);
-        }
-      }
-
-      function evaluateWindow(window) {
-        const aiCount = window.filter(v => v === AI).length;
-        const humanCount = window.filter(v => v === HUMAN).length;
-        const emptyCount = window.filter(v => v === EMPTY).length;
-
-        if (aiCount > 0 && humanCount > 0) return 0;
-        if (aiCount === 4) return 100000;
-        if (aiCount === 3 && emptyCount === 1) return 120;
-        if (aiCount === 2 && emptyCount === 2) return 18;
-        if (humanCount === 4) return -100000;
-        if (humanCount === 3 && emptyCount === 1) return -140;
-        if (humanCount === 2 && emptyCount === 2) return -20;
-        return 0;
-      }
-
-      function evaluateBoard(state) {
-        let score = 0;
-
-        const center = state.map(row => row[3]).filter(v => v === AI).length;
-        score += center * 6;
-
-        for (let r = 0; r < ROWS; r++) {
-          for (let c = 0; c <= COLS - WIN_LENGTH; c++) {
-            const window = [];
-            for (let i = 0; i < WIN_LENGTH; i++) window.push(state[r][c + i]);
-            score += evaluateWindow(window);
-          }
         }
 
-        for (let c = 0; c < COLS; c++) {
-          for (let r = 0; r <= ROWS - WIN_LENGTH; r++) {
-            const window = [];
-            for (let i = 0; i < WIN_LENGTH; i++) window.push(state[r + i][c]);
-            score += evaluateWindow(window);
-          }
+        function speak(text) {
+            speechBubble.innerText = text;
+            speechBubble.classList.add('show');
+            setTimeout(() => {
+                if (!gameOver) {
+                    speechBubble.classList.remove('show');
+                }
+            }, 3000);
         }
 
-        for (let r = 0; r <= ROWS - WIN_LENGTH; r++) {
-          for (let c = 0; c <= COLS - WIN_LENGTH; c++) {
-            const window = [];
-            for (let i = 0; i < WIN_LENGTH; i++) window.push(state[r + i][c + i]);
-            score += evaluateWindow(window);
-          }
+        function handleColumnClick(col) {
+            if (isAnimating || gameOver || currentPlayer !== PLAYER) return;
+
+            const row = getNextEmptyRow(col);
+            if (row === -1) return; // Column full
+
+            makeMove(row, col, PLAYER, () => {
+                if (checkWin(PLAYER)) {
+                    endGame("You Win! 🎉", winComments);
+                } else if (isBoardFull()) {
+                    endGame("It's a Tie! 🤝", drawComments);
+                } else {
+                    currentPlayer = AI;
+                    updateTurnUI();
+                    setTimeout(aiTurn, 800);
+                }
+            });
         }
 
-        for (let r = 0; r <= ROWS - WIN_LENGTH; r++) {
-          for (let c = WIN_LENGTH - 1; c < COLS; c++) {
-            const window = [];
-            for (let i = 0; i < WIN_LENGTH; i++) window.push(state[r + i][c - i]);
-            score += evaluateWindow(window);
-          }
+        function aiTurn() {
+            if (gameOver) return;
+
+            speak(aiComments[Math.floor(Math.random() * aiComments.length)]);
+
+            const col = getBestMove();
+            const row = getNextEmptyRow(col);
+
+            setTimeout(() => {
+                makeMove(row, col, AI, () => {
+                    if (checkWin(AI)) {
+                        endGame("Wise Owl Wins! 🦉", loseComments);
+                    } else if (isBoardFull()) {
+                        endGame("It's a Tie! 🤝", drawComments);
+                    } else {
+                        currentPlayer = PLAYER;
+                        updateTurnUI();
+                    }
+                });
+            }, 500);
         }
 
-        return score;
-      }
+        function makeMove(row, col, player, onComplete) {
+            isAnimating = true;
+            grid[row][col] = player;
 
-      function isWinner(state, player) {
-        for (let row = 0; row < ROWS; row++) {
-          for (let col = 0; col < COLS; col++) {
-            if (state[row][col] !== player) continue;
-            for (const [dx, dy] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
-              let count = 1;
-              for (let i = 1; i < WIN_LENGTH; i++) {
-                const r = row + dy * i;
-                const c = col + dx * i;
-                if (r < 0 || r >= ROWS || c < 0 || c >= COLS || state[r][c] !== player) break;
-                count++;
-              }
-              if (count >= WIN_LENGTH) return true;
+            const targetCell = document.getElementById(`cell-${row}-${col}`);
+            const rect = targetCell.getBoundingClientRect();
+
+            // Create temporary falling disc
+            const fallingDisc = document.createElement('div');
+            fallingDisc.className = `falling-disc ${player === PLAYER ? 'disc-red' : 'disc-yellow'}`;
+            fallingDisc.style.width = `${rect.width}px`;
+            fallingDisc.style.height = `${rect.height}px`;
+            fallingDisc.style.left = `${rect.left}px`;
+            fallingDisc.style.top = `-100px`; // Start above screen
+
+            document.getElementById('falling-container').appendChild(fallingDisc);
+
+            // Trigger animation after render
+            requestAnimationFrame(() => {
+                fallingDisc.style.top = `${rect.top}px`;
+            });
+
+            // Handle landing
+            setTimeout(() => {
+                targetCell.appendChild(fallingDisc);
+                fallingDisc.style.position = 'relative';
+                fallingDisc.style.top = '0';
+                fallingDisc.style.left = '0';
+                isAnimating = false;
+                if (onComplete) onComplete();
+            }, 460);
+        }
+
+        function getNextEmptyRow(col) {
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (grid[r][col] === 0) return r;
             }
-          }
-        }
-        return false;
-      }
-
-      function cloneBoard(state) {
-        return state.map(row => [...row]);
-      }
-
-      function getValidMoves(state) {
-        const moves = [];
-        for (let col = 0; col < COLS; col++) {
-          if (state[0][col] === EMPTY) moves.push(col);
-        }
-        return moves;
-      }
-
-      function getLowestOpenRow(state, col) {
-        for (let row = ROWS - 1; row >= 0; row--) {
-          if (state[row][col] === EMPTY) return row;
-        }
-        return -1;
-      }
-
-      function minimax(state, depth, alpha, beta, isMaximizing) {
-        if (isWinner(state, AI)) return 100000 + depth;
-        if (isWinner(state, HUMAN)) return -100000 - depth;
-        if (state[0].every(cell => cell !== EMPTY) || depth === 0) return evaluateBoard(state);
-
-        if (isMaximizing) {
-          let best = -Infinity;
-          for (const col of getValidMoves(state)) {
-            const next = cloneBoard(state);
-            const row = getLowestOpenRow(next, col);
-            next[row][col] = AI;
-            const score = minimax(next, depth - 1, alpha, beta, false);
-            best = Math.max(best, score);
-            alpha = Math.max(alpha, score);
-            if (beta <= alpha) break;
-          }
-          return best;
+            return -1;
         }
 
-        let best = Infinity;
-        for (const col of getValidMoves(state)) {
-          const next = cloneBoard(state);
-          const row = getLowestOpenRow(next, col);
-          next[row][col] = HUMAN;
-          const score = minimax(next, depth - 1, alpha, beta, true);
-          best = Math.min(best, score);
-          beta = Math.min(beta, score);
-          if (beta <= alpha) break;
-        }
-        return best;
-      }
-
-      function chooseBestMove() {
-        let bestScore = -Infinity;
-        let bestMove = 3;
-
-        for (const col of getValidMoves(board)) {
-          const next = cloneBoard(board);
-          const row = getLowestOpenRow(next, col);
-          next[row][col] = AI;
-          const score = minimax(next, 5, -Infinity, Infinity, false);
-          if (score > bestScore) {
-            bestScore = score;
-            bestMove = col;
-          }
+        function isBoardFull() {
+            return grid[0].every(cell => cell !== 0);
         }
 
-        return bestMove;
-      }
-
-      function resetGame() {
-        board = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
-        currentPlayer = HUMAN;
-        gameOver = false;
-        hoveredColumn = null;
-        updateBossHud();
-        renderBoard();
-        updateStatus();
-
-        if (aiStarts) {
-          currentPlayer = AI;
-          turnStatus.textContent = 'AI is thinking...';
-          setTimeout(() => {
-            if (!gameOver) {
-              const aiMove = chooseBestMove();
-              makeMove(aiMove, AI);
+        function updateTurnUI() {
+            if (currentPlayer === PLAYER) {
+                playerAvatar.classList.add('active');
+                aiAvatar.classList.remove('active');
+            } else {
+                aiAvatar.classList.add('active');
+                playerAvatar.classList.remove('active');
             }
-          }, 450);
         }
-      }
 
-      restartBtn.addEventListener('click', () => {
-        bossIndex = 0;
-        roundNumber = 1;
-        resetGame();
-      });
+        function endGame(title, speech) {
+            gameOver = true;
+            document.getElementById('win-message').innerText = title;
+            document.getElementById('win-overlay').classList.add('show');
+            speak(speech);
+        }
 
-      swapBtn.addEventListener('click', () => {
-        aiStarts = !aiStarts;
-        swapBtn.textContent = aiStarts ? 'Player starts' : 'AI starts';
-        bossIndex = 0;
-        roundNumber = 1;
-        resetGame();
-      });
+        function resetGame() {
+            grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+            isAnimating = false;
+            gameOver = false;
+            currentPlayer = PLAYER;
+            document.getElementById('win-overlay').classList.remove('show');
+            document.getElementById('falling-container').innerHTML = '';
+            createBoard();
+            updateTurnUI();
+            speak("Let's play again! Your turn first.");
+        }
 
-      updateBossHud();
-      buildBoard();
-      renderBoard();
-      updateStatus();
+        // AI Logic (Simple & Fair for Seniors)
+        function getBestMove() {
+            // 1. Can AI win in 1 move?
+            for (let c = 0; c < COLS; c++) {
+                let r = getNextEmptyRow(c);
+                if (r !== -1) {
+                    grid[r][c] = AI;
+                    if (checkWin(AI)) {
+                        grid[r][c] = 0;
+                        return c;
+                    }
+                    grid[r][c] = 0;
+                }
+            }
+
+            // 2. Can Player win in 1 move? Block them!
+            for (let c = 0; c < COLS; c++) {
+                let r = getNextEmptyRow(c);
+                if (r !== -1) {
+                    grid[r][c] = PLAYER;
+                    if (checkWin(PLAYER)) {
+                        grid[r][c] = 0;
+                        return c;
+                    }
+                    grid[r][c] = 0;
+                }
+            }
+
+            // 3. Otherwise, prefer center columns
+            const validCols = [];
+            for (let c = 0; c < COLS; c++) {
+                if (getNextEmptyRow(c) !== -1) validCols.push(c);
+            }
+            
+            const centerOrder = [3, 2, 4, 1, 5, 0, 6];
+            for (let c of centerOrder) {
+                if (validCols.includes(c)) return c;
+            }
+
+            return validCols[0];
+        }
+
+        function checkWin(player) {
+            // Horizontal
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c <= COLS - 4; c++) {
+                    if (grid[r][c] === player && grid[r][c+1] === player &&
+                        grid[r][c+2] === player && grid[r][c+3] === player) return true;
+                }
+            }
+            // Vertical
+            for (let r = 0; r <= ROWS - 4; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (grid[r][c] === player && grid[r+1][c] === player &&
+                        grid[r+2][c] === player && grid[r+3][c] === player) return true;
+                }
+            }
+            // Diagonal Down-Right
+            for (let r = 0; r <= ROWS - 4; r++) {
+                for (let c = 0; c <= COLS - 4; c++) {
+                    if (grid[r][c] === player && grid[r+1][c+1] === player &&
+                        grid[r+2][c+2] === player && grid[r+3][c+3] === player) return true;
+                }
+            }
+            // Diagonal Up-Right
+            for (let r = 3; r < ROWS; r++) {
+                for (let c = 0; c <= COLS - 4; c++) {
+                    if (grid[r][c] === player && grid[r-1][c+1] === player &&
+                        grid[r-2][c+2] === player && grid[r-3][c+3] === player) return true;
+                }
+            }
+            return false;
+        }
+
+        // Start initial game
+        createBoard();
+        setTimeout(() => speak("Hello my dear! Ready to play?"), 500);
     </script>
-  </body>
+</body>
 </html>
