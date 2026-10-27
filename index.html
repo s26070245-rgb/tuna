@@ -12,9 +12,11 @@
         --panel-border: rgba(148, 163, 184, 0.2);
         --text: #e2e8f0;
         --muted: #94a3b8;
-        --yellow: #facc15;
         --red: #f87171;
+        --yellow: #facc15;
         --blue: #60a5fa;
+        --board: #1d4ed8;
+        --cell: #0f172a;
       }
 
       * { box-sizing: border-box; }
@@ -23,52 +25,128 @@
         margin: 0;
         width: 100%;
         height: 100%;
-        overflow: hidden;
         background: radial-gradient(circle at top, #172554, var(--bg1) 40%, var(--bg2));
         color: var(--text);
         font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      #app {
-        position: relative;
-        width: 100%;
-        height: 100%;
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
       }
 
-      #gameCanvas {
-        display: block;
-        width: 100%;
-        height: 100%;
+      #app {
+        position: relative;
+        width: min(92vw, 760px);
+        aspect-ratio: 1.12;
+        display: grid;
+        place-items: center;
       }
 
       .hud {
         position: absolute;
         top: 16px;
         left: 16px;
-        min-width: min(320px, 40vw);
+        z-index: 3;
+        min-width: min(260px, 40vw);
         background: var(--panel);
         border: 1px solid var(--panel-border);
         border-radius: 16px;
         padding: 14px 16px;
-        backdrop-filter: blur(8px);
         box-shadow: 0 18px 32px rgba(15, 23, 42, 0.3);
+        backdrop-filter: blur(8px);
       }
 
       h1 {
         margin: 0;
-        font-size: clamp(1.35rem, 2vw, 2.1rem);
-        letter-spacing: 0.06em;
+        font-size: clamp(1.2rem, 2vw, 2rem);
+        letter-spacing: 0.08em;
         text-transform: uppercase;
       }
 
       .status {
         margin-top: 10px;
-        font-size: 1rem;
         color: var(--muted);
+        font-size: 1rem;
       }
 
-      .status b {
+      .status span {
         color: var(--text);
+        font-weight: 700;
+      }
+
+      .legend {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      .dot.red { background: var(--red); }
+      .dot.yellow { background: var(--yellow); }
+
+      #board {
+        width: min(84vw, 620px);
+        aspect-ratio: 7 / 6;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.6rem;
+        padding: 0.9rem;
+        background: linear-gradient(180deg, #1d4ed8, #1e3a8a);
+        border-radius: 24px;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.55), inset 0 0 0 3px rgba(255,255,255,0.12);
+        border: 1px solid rgba(191, 219, 254, 0.2);
+      }
+
+      .cell {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--cell);
+        border: none;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+        box-shadow: inset 0 10px 18px rgba(15, 23, 42, 0.9);
+      }
+
+      .cell:hover {
+        transform: translateY(-1px);
+      }
+
+      .cell::before {
+        content: "";
+        position: absolute;
+        inset: 14%;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+
+      .cell.hovered::before {
+        opacity: 1;
+      }
+
+      .cell.red {
+        background: linear-gradient(135deg, #f87171, #ef4444);
+        box-shadow: inset 0 8px 12px rgba(255,255,255,0.25), inset 0 -8px 16px rgba(127,29,29,0.28), 0 0 18px rgba(248,113,113,0.38);
+      }
+
+      .cell.yellow {
+        background: linear-gradient(135deg, #facc15, #eab308);
+        box-shadow: inset 0 8px 12px rgba(255,255,255,0.28), inset 0 -8px 16px rgba(133,77,14,0.25), 0 0 18px rgba(250,204,21,0.32);
       }
 
       .controls {
@@ -76,7 +154,7 @@
         right: 20px;
         bottom: 20px;
         display: flex;
-        gap: 10px;
+        gap: 12px;
         flex-wrap: wrap;
         justify-content: flex-end;
       }
@@ -113,6 +191,10 @@
           min-width: auto;
         }
 
+        #board {
+          width: min(88vw, 560px);
+        }
+
         .controls {
           left: 12px;
           right: 12px;
@@ -127,12 +209,16 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="gameCanvas"></canvas>
-
       <div class="hud">
         <h1>Connect Four</h1>
-        <div class="status"><b id="turnStatus">Your turn</b></div>
+        <div class="status">Status: <span id="turnStatus">Your turn</span></div>
+        <div class="legend">
+          <span><i class="dot red"></i>You</span>
+          <span><i class="dot yellow"></i>AI</span>
+        </div>
       </div>
+
+      <div id="board" aria-label="Connect Four board"></div>
 
       <div class="controls">
         <button id="restartBtn">Restart</button>
@@ -140,9 +226,7 @@
       </div>
     </div>
 
-    <script type="module">
-      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
-
+    <script>
       const ROWS = 6;
       const COLS = 7;
       const EMPTY = 0;
@@ -150,122 +234,89 @@
       const AI = 2;
       const WIN_LENGTH = 4;
 
-      const boardState = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
-      const discMeshes = new Map();
-      const boardHighlights = [];
-
+      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
       let currentPlayer = HUMAN;
       let gameOver = false;
       let aiStarts = false;
-      let hoveredCol = null;
+      let hoveredColumn = null;
 
-      const canvas = document.getElementById('gameCanvas');
+      const boardEl = document.getElementById('board');
       const turnStatus = document.getElementById('turnStatus');
       const restartBtn = document.getElementById('restartBtn');
       const swapBtn = document.getElementById('swapBtn');
 
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setClearColor(0x000000, 0);
-
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 11, 15.5);
-      camera.lookAt(0, 0, 0);
-
-      const ambient = new THREE.AmbientLight(0xffffff, 1.3);
-      scene.add(ambient);
-
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-      dirLight.position.set(7, 10, 8);
-      scene.add(dirLight);
-
-      const boardGroup = new THREE.Group();
-      scene.add(boardGroup);
-
-      function createBoard() {
-        boardGroup.clear();
-        boardHighlights.length = 0;
-        discMeshes.clear();
-
-        const boardBase = new THREE.Mesh(
-          new THREE.BoxGeometry(9.6, 0.4, 7.6),
-          new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.2, roughness: 0.5 })
-        );
-        boardBase.position.y = -0.7;
-        boardGroup.add(boardBase);
-
-        const grid = new THREE.Group();
+      function buildBoard() {
+        boardEl.innerHTML = '';
         for (let row = 0; row < ROWS; row++) {
           for (let col = 0; col < COLS; col++) {
-            const hole = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.78, 0.78, 0.18, 40),
-              new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.3, roughness: 0.6 })
-            );
-            hole.position.set((col - 3) * 1.35, 0.1 + row * 0.8, (row - 2.5) * 1.15);
-            hole.rotation.x = Math.PI / 2;
-            grid.add(hole);
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'cell';
+            cell.dataset.row = String(row);
+            cell.dataset.col = String(col);
+            cell.setAttribute('aria-label', `Column ${col + 1}, row ${row + 1}`);
+            cell.addEventListener('mouseenter', () => {
+              if (!gameOver && currentPlayer === HUMAN) {
+                hoveredColumn = col;
+                updateColumnHover();
+              }
+            });
+            cell.addEventListener('mouseleave', () => {
+              if (hoveredColumn === col) {
+                hoveredColumn = null;
+                updateColumnHover();
+              }
+            });
+            cell.addEventListener('click', () => handleHumanMove(col));
+            boardEl.appendChild(cell);
           }
         }
-        boardGroup.add(grid);
+      }
 
-        for (let col = 0; col < COLS; col++) {
-          const hover = new THREE.Mesh(
-            new THREE.BoxGeometry(1.1, 0.05, 7.1),
-            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
-          );
-          hover.position.set((col - 3) * 1.35, -0.35, 0);
-          hover.userData.col = col;
-          boardGroup.add(hover);
-          boardHighlights.push(hover);
-        }
+      function renderBoard() {
+        const cells = [...boardEl.children];
+        cells.forEach((cell) => {
+          const row = Number(cell.dataset.row);
+          const col = Number(cell.dataset.col);
+          const value = board[row][col];
+          cell.classList.remove('red', 'yellow', 'hovered');
+          if (value === HUMAN) cell.classList.add('red');
+          if (value === AI) cell.classList.add('yellow');
+          if (hoveredColumn === col && !gameOver && currentPlayer === HUMAN) {
+            cell.classList.add('hovered');
+          }
+        });
+      }
+
+      function updateColumnHover() {
+        const cells = [...boardEl.children];
+        cells.forEach((cell) => {
+          const col = Number(cell.dataset.col);
+          cell.classList.toggle('hovered', hoveredColumn === col && !gameOver && currentPlayer === HUMAN);
+        });
+      }
+
+      function updateStatus() {
+        if (gameOver) return;
+        turnStatus.textContent = currentPlayer === HUMAN ? 'Your turn' : 'AI is thinking...';
+      }
+
+      function isValidMove(col) {
+        return col >= 0 && col < COLS && board[0][col] === EMPTY;
       }
 
       function getOpenRow(col) {
         for (let row = ROWS - 1; row >= 0; row--) {
-          if (boardState[row][col] === EMPTY) return row;
+          if (board[row][col] === EMPTY) return row;
         }
         return -1;
       }
 
-      function isValidMove(col) {
-        return col >= 0 && col < COLS && getOpenRow(col) !== -1;
-      }
-
-      function makeMove(col, player) {
-        if (gameOver || !isValidMove(col)) return false;
+      function dropDisc(col, player) {
         const row = getOpenRow(col);
-        boardState[row][col] = player;
-
-        const disc = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.64, 0.64, 0.32, 32),
-          new THREE.MeshStandardMaterial({
-            color: player === HUMAN ? 0xf87171 : 0xfacc15,
-            metalness: 0.25,
-            roughness: 0.4
-          })
-        );
-        disc.position.set((col - 3) * 1.35, 1.1 + row * 0.8, (row - 2.5) * 1.15);
-        disc.rotation.x = Math.PI / 2;
-        boardGroup.add(disc);
-        discMeshes.set(`${row},${col}`, disc);
-
-        const winner = checkWinner(row, col, player);
-        if (winner) {
-          gameOver = true;
-          turnStatus.innerHTML = `Player ${player === HUMAN ? 'red' : 'yellow'} wins!`;
-          return true;
-        }
-
-        if (isBoardFull()) {
-          gameOver = true;
-          turnStatus.innerHTML = 'Draw!';
-          return true;
-        }
-
-        currentPlayer = currentPlayer === HUMAN ? AI : HUMAN;
-        turnStatus.innerHTML = currentPlayer === HUMAN ? 'Your turn' : 'AI is thinking...';
-        return true;
+        if (row === -1) return -1;
+        board[row][col] = player;
+        return row;
       }
 
       function checkWinner(row, col, player) {
@@ -290,7 +341,7 @@
         let r = row + dy;
         let c = col + dx;
 
-        while (r >= 0 && r < ROWS && c >= 0 && c < COLS && boardState[r][c] === player) {
+        while (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === player) {
           count++;
           r += dy;
           c += dx;
@@ -299,14 +350,71 @@
       }
 
       function isBoardFull() {
-        return boardState[0].every(cell => cell !== EMPTY);
+        return board[0].every(cell => cell !== EMPTY);
       }
 
-      function evaluateBoardState(state) {
+      function finishGame(message) {
+        gameOver = true;
+        turnStatus.textContent = message;
+      }
+
+      function makeMove(col, player) {
+        if (gameOver || !isValidMove(col)) return false;
+
+        const row = dropDisc(col, player);
+        if (row === -1) return false;
+
+        renderBoard();
+
+        if (checkWinner(row, col, player)) {
+          finishGame(player === HUMAN ? 'You win!' : 'AI wins!');
+          return true;
+        }
+
+        if (isBoardFull()) {
+          finishGame('Draw!');
+          return true;
+        }
+
+        currentPlayer = player === HUMAN ? AI : HUMAN;
+        updateStatus();
+        return true;
+      }
+
+      function handleHumanMove(col) {
+        if (gameOver || currentPlayer !== HUMAN) return;
+        if (!makeMove(col, HUMAN)) return;
+
+        if (!gameOver && currentPlayer === AI) {
+          setTimeout(() => {
+            if (!gameOver) {
+              const aiMove = chooseBestMove();
+              makeMove(aiMove, AI);
+            }
+          }, 300);
+        }
+      }
+
+      function evaluateWindow(window) {
+        const aiCount = window.filter(v => v === AI).length;
+        const humanCount = window.filter(v => v === HUMAN).length;
+        const emptyCount = window.filter(v => v === EMPTY).length;
+
+        if (aiCount > 0 && humanCount > 0) return 0;
+        if (aiCount === 4) return 100000;
+        if (aiCount === 3 && emptyCount === 1) return 120;
+        if (aiCount === 2 && emptyCount === 2) return 18;
+        if (humanCount === 4) return -100000;
+        if (humanCount === 3 && emptyCount === 1) return -140;
+        if (humanCount === 2 && emptyCount === 2) return -20;
+        return 0;
+      }
+
+      function evaluateBoard(state) {
         let score = 0;
 
-        const centerCount = state.map(row => row[3]).filter(v => v === AI).length;
-        score += centerCount * 6;
+        const center = state.map(row => row[3]).filter(v => v === AI).length;
+        score += center * 6;
 
         for (let r = 0; r < ROWS; r++) {
           for (let c = 0; c <= COLS - WIN_LENGTH; c++) {
@@ -343,98 +451,11 @@
         return score;
       }
 
-      function evaluateWindow(window) {
-        const aiCount = window.filter(v => v === AI).length;
-        const humanCount = window.filter(v => v === HUMAN).length;
-        const emptyCount = window.filter(v => v === EMPTY).length;
-
-        if (aiCount > 0 && humanCount > 0) return 0;
-        if (aiCount === 4) return 100000;
-        if (aiCount === 3 && emptyCount === 1) return 120;
-        if (aiCount === 2 && emptyCount === 2) return 18;
-        if (humanCount === 4) return -100000;
-        if (humanCount === 3 && emptyCount === 1) return -140;
-        if (humanCount === 2 && emptyCount === 2) return -20;
-        return 0;
-      }
-
-      function getValidMoves(state) {
-        const moves = [];
-        for (let col = 0; col < COLS; col++) {
-          if (state[0][col] === EMPTY) moves.push(col);
-        }
-        return moves;
-      }
-
-      function findBestMove() {
-        let bestScore = -Infinity;
-        let bestMove = 3;
-
-        for (const col of getValidMoves(boardState)) {
-          const next = deepCloneState(boardState);
-          const row = getLowestOpenRow(next, col);
-          next[row][col] = AI;
-          const score = minimax(next, 5, -Infinity, Infinity, false);
-          if (score > bestScore) {
-            bestScore = score;
-            bestMove = col;
-          }
-        }
-
-        return bestMove;
-      }
-
-      function minimax(state, depth, alpha, beta, isMaximizing) {
-        const score = evaluateBoardState(state);
-        const winner = detectWinnerState(state, AI);
-        if (winner) return 100000 + depth;
-        const humanWinner = detectWinnerState(state, HUMAN);
-        if (humanWinner) return -100000 - depth;
-        if (depth === 0 || isBoardFullState(state)) return score;
-
-        if (isMaximizing) {
-          let maxEval = -Infinity;
-          for (const col of getValidMoves(state)) {
-            const next = deepCloneState(state);
-            const row = getLowestOpenRow(next, col);
-            next[row][col] = AI;
-            const evalScore = minimax(next, depth - 1, alpha, beta, false);
-            maxEval = Math.max(maxEval, evalScore);
-            alpha = Math.max(alpha, evalScore);
-            if (beta <= alpha) break;
-          }
-          return maxEval;
-        }
-
-        let minEval = Infinity;
-        for (const col of getValidMoves(state)) {
-          const next = deepCloneState(state);
-          const row = getLowestOpenRow(next, col);
-          next[row][col] = HUMAN;
-          const evalScore = minimax(next, depth - 1, alpha, beta, true);
-          minEval = Math.min(minEval, evalScore);
-          beta = Math.min(beta, evalScore);
-          if (beta <= alpha) break;
-        }
-        return minEval;
-      }
-
-      function deepCloneState(state) {
-        return state.map(row => [...row]);
-      }
-
-      function getLowestOpenRow(state, col) {
-        for (let row = ROWS - 1; row >= 0; row--) {
-          if (state[row][col] === EMPTY) return row;
-        }
-        return -1;
-      }
-
-      function detectWinnerState(state, player) {
+      function isWinner(state, player) {
         for (let row = 0; row < ROWS; row++) {
           for (let col = 0; col < COLS; col++) {
             if (state[row][col] !== player) continue;
-            for (const [dx, dy] of [[0,1],[1,0],[1,1],[1,-1]]) {
+            for (const [dx, dy] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
               let count = 1;
               for (let i = 1; i < WIN_LENGTH; i++) {
                 const r = row + dy * i;
@@ -449,127 +470,105 @@
         return false;
       }
 
-      function isBoardFullState(state) {
-        return state[0].every(cell => cell !== EMPTY);
+      function cloneBoard(state) {
+        return state.map(row => [...row]);
       }
 
-      function handleHumanMove(col) {
-        if (gameOver || currentPlayer !== HUMAN) return;
-        const move = makeMove(col, HUMAN);
-        if (!move) return;
-
-        if (!gameOver && currentPlayer === AI) {
-          setTimeout(() => {
-            if (!gameOver) {
-              const aiCol = findBestMove();
-              makeMove(aiCol, AI);
-              if (!gameOver) {
-                currentPlayer = HUMAN;
-                turnStatus.innerHTML = 'Your turn';
-              }
-            }
-          }, 300);
+      function getValidMoves(state) {
+        const moves = [];
+        for (let col = 0; col < COLS; col++) {
+          if (state[0][col] === EMPTY) moves.push(col);
         }
+        return moves;
       }
 
-      function onPointerMove(event) {
-        if (gameOver || currentPlayer !== HUMAN) return;
-
-        const rect = canvas.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2(x, y);
-        raycaster.setFromCamera(pointer, camera);
-
-        const intersections = raycaster.intersectObjects(boardHighlights, false);
-        if (intersections.length > 0) {
-          hoveredCol = intersections[0].object.userData.col;
-          boardHighlights.forEach((h, idx) => {
-            const visible = idx === hoveredCol;
-            h.material.opacity = visible ? 0.18 : 0;
-            h.material.color.set(visible ? 0xffffff : 0x000000);
-          });
+      function getLowestOpenRow(state, col) {
+        for (let row = ROWS - 1; row >= 0; row--) {
+          if (state[row][col] === EMPTY) return row;
         }
+        return -1;
       }
 
-      function onPointerDown(event) {
-        if (gameOver || currentPlayer !== HUMAN) return;
-        if (hoveredCol === null || hoveredCol === undefined) return;
-        handleHumanMove(hoveredCol);
+      function minimax(state, depth, alpha, beta, isMaximizing) {
+        if (isWinner(state, AI)) return 100000 + depth;
+        if (isWinner(state, HUMAN)) return -100000 - depth;
+        if (state[0].every(cell => cell !== EMPTY) || depth === 0) return evaluateBoard(state);
+
+        if (isMaximizing) {
+          let best = -Infinity;
+          for (const col of getValidMoves(state)) {
+            const next = cloneBoard(state);
+            const row = getLowestOpenRow(next, col);
+            next[row][col] = AI;
+            const score = minimax(next, depth - 1, alpha, beta, false);
+            best = Math.max(best, score);
+            alpha = Math.max(alpha, score);
+            if (beta <= alpha) break;
+          }
+          return best;
+        }
+
+        let best = Infinity;
+        for (const col of getValidMoves(state)) {
+          const next = cloneBoard(state);
+          const row = getLowestOpenRow(next, col);
+          next[row][col] = HUMAN;
+          const score = minimax(next, depth - 1, alpha, beta, true);
+          best = Math.min(best, score);
+          beta = Math.min(beta, score);
+          if (beta <= alpha) break;
+        }
+        return best;
+      }
+
+      function chooseBestMove() {
+        let bestScore = -Infinity;
+        let bestMove = 3;
+
+        for (const col of getValidMoves(board)) {
+          const next = cloneBoard(board);
+          const row = getLowestOpenRow(next, col);
+          next[row][col] = AI;
+          const score = minimax(next, 5, -Infinity, Infinity, false);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = col;
+          }
+        }
+
+        return bestMove;
       }
 
       function resetGame() {
-        for (let row = 0; row < ROWS; row++) {
-          for (let col = 0; col < COLS; col++) {
-            boardState[row][col] = EMPTY;
-          }
-        }
-
-        for (const mesh of boardGroup.children) {
-          if (mesh.geometry && mesh.geometry.type !== 'BoxGeometry') {
-            // no-op for this simpler clear flow
-          }
-        }
-
-        boardGroup.children.slice().forEach((child) => {
-          if (child.type === 'Mesh' && child.geometry.type !== 'BoxGeometry') {
-            boardGroup.remove(child);
-            child.geometry.dispose();
-            if (child.material && child.material.dispose) child.material.dispose();
-          }
-        });
-
-        createBoard();
-        gameOver = false;
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
         currentPlayer = HUMAN;
-        hoveredCol = null;
-        turnStatus.innerHTML = 'Your turn';
+        gameOver = false;
+        hoveredColumn = null;
+        renderBoard();
+        updateStatus();
 
         if (aiStarts) {
           currentPlayer = AI;
-          turnStatus.innerHTML = 'AI is thinking...';
+          turnStatus.textContent = 'AI is thinking...';
           setTimeout(() => {
-            const aiCol = findBestMove();
-            makeMove(aiCol, AI);
-            currentPlayer = HUMAN;
-            turnStatus.innerHTML = 'Your turn';
-          }, 400);
+            if (!gameOver) {
+              const aiMove = chooseBestMove();
+              makeMove(aiMove, AI);
+            }
+          }, 450);
         }
       }
 
-      restartBtn.addEventListener('click', resetGame);
+      restartBtn.addEventListener('click', () => resetGame());
       swapBtn.addEventListener('click', () => {
         aiStarts = !aiStarts;
         swapBtn.textContent = aiStarts ? 'Player starts' : 'AI starts';
         resetGame();
       });
 
-      canvas.addEventListener('pointermove', onPointerMove);
-      canvas.addEventListener('pointerdown', onPointerDown);
-
-      function resize() {
-        const { innerWidth, innerHeight } = window;
-        renderer.setSize(innerWidth, innerHeight, false);
-        camera.aspect = innerWidth / innerHeight;
-        camera.updateProjectionMatrix();
-      }
-
-      function animate() {
-        requestAnimationFrame(animate);
-        const t = performance.now() * 0.001;
-        camera.position.x = Math.sin(t * 0.7) * 0.85;
-        camera.position.y = 11.5 + Math.sin(t * 0.85) * 0.3;
-        camera.lookAt(0, 0.5, 0);
-        boardGroup.rotation.y = Math.sin(t * 0.45) * 0.18;
-        renderer.render(scene, camera);
-      }
-
-      createBoard();
-      resize();
-      window.addEventListener('resize', resize);
-      animate();
+      buildBoard();
+      renderBoard();
+      updateStatus();
     </script>
   </body>
 </html>
